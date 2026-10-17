@@ -5,12 +5,18 @@
 #include "Engine/Source/Gxu/GxuFontMiscClasses.h"
 #include "Engine/Source/Storm/H/storm.h"
 
+// 【修复说明】：
+// 魔兽世界中文版用的字体（如 ZYKai_T、ZYHei）内部有个错误的标记，
+// 导致 FreeType 字体引擎认为它们非常宽，进而把中文字符拉伸到了原来的两倍宽。
+// 加上 FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH 标志，可以强制忽略那个错误的全局宽度，
+// 使用每个汉字真实的宽度，完美还原当年原版客户端的中文显示效果。
 // VERIFY: fff26b99 manual
 // OFFSET: 0x006C8C10
 static int32_t FREETYPE_RenderGlyph(FT_Face face, uint32_t code, bool monochrome) {
     FT_UInt index = FT_Get_Char_Index(face, code);
 
-    if (!index || FT_Load_Glyph(face, index, monochrome ? FT_LOAD_LINEAR_DESIGN | FT_LOAD_PEDANTIC | FT_LOAD_CROP_BITMAP | FT_LOAD_NO_HINTING : FT_LOAD_LINEAR_DESIGN | FT_LOAD_PEDANTIC | FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING)) {
+    // 下面的代码中，我们在三元运算符的“前后两个分支”最后都加上了 | FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH
+    if (!index || FT_Load_Glyph(face, index, monochrome ? FT_LOAD_LINEAR_DESIGN | FT_LOAD_PEDANTIC | FT_LOAD_CROP_BITMAP | FT_LOAD_NO_HINTING | FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH : FT_LOAD_LINEAR_DESIGN | FT_LOAD_PEDANTIC | FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING | FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH)) {
         return 0;
     }
 
